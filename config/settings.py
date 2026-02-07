@@ -3,16 +3,32 @@ Configuración centralizada del bot de Discord
 """
 import os
 
+# DEBUG: Imprimir todas las variables de entorno para diagnosticar
+print("=" * 50)
+print("DEBUG: Variables de entorno disponibles:")
+for key in os.environ:
+    if 'TOKEN' in key or 'DISCORD' in key:
+        print(f"  {key} = {'*' * 10} (existe)")
+print("=" * 50)
+
 # Intentar cargar dotenv solo si está disponible (local)
 try:
     from dotenv import load_dotenv
     load_dotenv()
+    print("DEBUG: dotenv cargado")
 except ImportError:
-    # En Railway no necesitamos dotenv
+    print("DEBUG: dotenv no disponible (normal en Railway)")
     pass
 
 # Token del bot (REQUERIDO)
-DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
+DISCORD_TOKEN = os.getenv('DISCORD_TOKEN') or os.environ.get('DISCORD_TOKEN')
+
+# DEBUG: Verificar si se cargó el token
+if DISCORD_TOKEN:
+    print(f"DEBUG: DISCORD_TOKEN encontrado (longitud: {len(DISCORD_TOKEN)} caracteres)")
+else:
+    print("DEBUG: DISCORD_TOKEN NO encontrado")
+    print(f"DEBUG: Total de variables de entorno: {len(os.environ)}")
 
 # IDs opcionales
 GUILD_ID = os.getenv('GUILD_ID')
