@@ -5,7 +5,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 import pytz
 
 from utils.embeds import create_event_embed, create_success_embed, create_error_embed, create_info_embed
@@ -119,7 +119,7 @@ class EventsCog(commands.Cog):
                 title="📅 Próximos Eventos",
                 description=f"Hay {len(events)} evento(s) programado(s)",
                 color=0x9b59b6,
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
             
             # Mostrar hasta 10 eventos

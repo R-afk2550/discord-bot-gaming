@@ -7,7 +7,7 @@ from discord.ext import commands
 import logging
 import sys
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 
 from config.settings import DISCORD_TOKEN, GUILD_ID
 from database.db_manager import db_manager
@@ -40,7 +40,7 @@ class GamingBot(commands.Bot):
             help_command=None  # Desactivamos el comando de ayuda por defecto
         )
         
-        self.start_time = datetime.utcnow()
+        self.start_time = datetime.now(timezone.utc)
     
     async def setup_hook(self):
         """Se ejecuta antes de que el bot inicie sesión"""

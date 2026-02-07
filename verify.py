@@ -45,10 +45,19 @@ def check_token():
     
     with open('.env', 'r') as f:
         content = f.read()
-        if 'DISCORD_TOKEN=tu_token_aqui' in content or not any('DISCORD_TOKEN=' in line and line.split('=')[1].strip() for line in content.split('\n') if line.startswith('DISCORD_TOKEN=')):
+        
+        # Verificar si el token está configurado con el valor de ejemplo
+        has_example_token = 'DISCORD_TOKEN=tu_token_aqui' in content
+        
+        # Verificar si hay una línea válida con token
+        token_lines = [line for line in content.split('\n') if line.startswith('DISCORD_TOKEN=')]
+        has_valid_token = any(line.split('=')[1].strip() for line in token_lines)
+        
+        if has_example_token or not has_valid_token:
             print("⚠️  Token de Discord no configurado")
             print("   Edita .env y añade tu token")
             return False
+    
     print("✅ Token configurado")
     return True
 

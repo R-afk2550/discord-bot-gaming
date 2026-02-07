@@ -6,7 +6,7 @@ from discord import app_commands
 from discord.ext import commands
 import logging
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from config.settings import GAMES
 from utils.embeds import (
@@ -168,7 +168,7 @@ class UtilityCog(commands.Cog):
         )
         
         embed.set_footer(text="Usa /roles para comenzar a jugar con la comunidad!")
-        embed.timestamp = datetime.utcnow()
+        embed.timestamp = datetime.now(timezone.utc)
         
         await interaction.response.send_message(embed=embed, ephemeral=True)
 

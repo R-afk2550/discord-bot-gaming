@@ -2,7 +2,7 @@
 Plantillas de embeds para el bot
 """
 import discord
-from datetime import datetime
+from datetime import datetime, timezone
 from config.settings import COLORS
 
 
@@ -12,7 +12,7 @@ def create_info_embed(title: str, description: str, **kwargs) -> discord.Embed:
         title=title,
         description=description,
         color=COLORS['info'],
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now(timezone.utc)
     )
     for key, value in kwargs.items():
         embed.add_field(name=key, value=value, inline=False)
@@ -25,7 +25,7 @@ def create_success_embed(title: str, description: str) -> discord.Embed:
         title=f"✅ {title}",
         description=description,
         color=COLORS['success'],
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now(timezone.utc)
     )
 
 
@@ -35,7 +35,7 @@ def create_error_embed(title: str, description: str) -> discord.Embed:
         title=f"❌ {title}",
         description=description,
         color=COLORS['error'],
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now(timezone.utc)
     )
 
 
@@ -45,7 +45,7 @@ def create_warning_embed(title: str, description: str) -> discord.Embed:
         title=f"⚠️ {title}",
         description=description,
         color=COLORS['warning'],
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now(timezone.utc)
     )
 
 
@@ -55,7 +55,7 @@ def create_event_embed(title: str, description: str, event_date: str, creator: s
         title=f"📅 {title}",
         description=description,
         color=COLORS['event'],
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now(timezone.utc)
     )
     embed.add_field(name="Fecha del Evento", value=event_date, inline=True)
     embed.add_field(name="Organizador", value=creator, inline=True)
@@ -68,7 +68,7 @@ def create_welcome_embed(member: discord.Member, guild: discord.Guild) -> discor
         title=f"¡Bienvenido/a a {guild.name}! 🎮",
         description=f"¡Hola {member.mention}! Nos alegra tenerte aquí.",
         color=COLORS['success'],
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now(timezone.utc)
     )
     embed.set_thumbnail(url=member.display_avatar.url)
     embed.add_field(
@@ -96,7 +96,7 @@ def create_lfg_embed(game: str, user: discord.Member, description: str = None, *
         title=f"🎮 Buscando grupo para {game}",
         description=description or f"{user.mention} está buscando compañeros para jugar!",
         color=COLORS['info'],
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now(timezone.utc)
     )
     embed.set_author(name=user.display_name, icon_url=user.display_avatar.url)
     
@@ -113,7 +113,7 @@ def create_profile_embed(user: discord.Member, games: str, warnings_count: int) 
     embed = discord.Embed(
         title=f"Perfil de {user.display_name}",
         color=COLORS['info'],
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now(timezone.utc)
     )
     embed.set_thumbnail(url=user.display_avatar.url)
     embed.add_field(name="🎮 Juegos Registrados", value=games or "Ninguno", inline=False)
@@ -127,7 +127,7 @@ def create_userinfo_embed(user: discord.Member) -> discord.Embed:
     embed = discord.Embed(
         title="Información del Usuario",
         color=COLORS['info'],
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now(timezone.utc)
     )
     embed.set_thumbnail(url=user.display_avatar.url)
     embed.add_field(name="Nombre", value=user.name, inline=True)
@@ -147,7 +147,7 @@ def create_serverinfo_embed(guild: discord.Guild) -> discord.Embed:
     embed = discord.Embed(
         title=f"Información de {guild.name}",
         color=COLORS['info'],
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now(timezone.utc)
     )
     if guild.icon:
         embed.set_thumbnail(url=guild.icon.url)
