@@ -1,100 +1,93 @@
-import aiosqlite
+import sqlite3
 
-class DatabaseManager:
-    def __init__(self, db_file):
-        self.db_file = db_file
+class DatabaseManager():
+    def __init__(self, db_name):
+        self.conn = sqlite3.connect(db_name)
+        self.cursor = self.conn.cursor()
 
-    async def connect(self):
-        self.connection = await aiosqlite.connect(self.db_file)
-        self.cursor = await self.connection.cursor()
-
-    async def close(self):
-        await self.cursor.close()
-        await self.connection.close()
-
-    async def setup_tables(self):
-        # Create levels table
-        await self.connection.execute('''CREATE TABLE IF NOT EXISTS levels (
-            user_id TEXT,
-            guild_id TEXT,
-            xp INTEGER,
-            level INTEGER,
-            total_messages INTEGER,
-            last_xp_time TIMESTAMP
+    async def create_tables(self):
+        self.cursor.execute('''CREATE TABLE IF NOT EXISTS warnings (
+            id INTEGER PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            warning_reason TEXT NOT NULL,
+            date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )''')
 
-        # Create economy table
-        await self.connection.execute('''CREATE TABLE IF NOT EXISTS economy (
-            user_id TEXT,
-            guild_id TEXT,
-            balance INTEGER,
-            last_daily TIMESTAMP,
-            last_work TIMESTAMP
+        self.cursor.execute('''CREATE TABLE IF NOT EXISTS user_profiles (
+            id INTEGER PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            username TEXT NOT NULL,
+            level INTEGER DEFAULT 0,
+            coins INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )''')
-        await self.connection.commit()
+        
+        self.cursor.execute('''CREATE TABLE IF NOT EXISTS events (
+            id INTEGER PRIMARY KEY,
+            event_name TEXT NOT NULL,
+            event_date TIMESTAMP NOT NULL
+        )''')
 
-    async def add_xp(self, user_id, guild_id, xp):
-        # Method to add XP to a user
-        await self.connection.execute('''INSERT INTO levels (user_id, guild_id, xp, total_messages, last_xp_time) VALUES (?, ?, ?, 1, datetime('now'))
-        ON CONFLICT(user_id, guild_id) DO UPDATE SET xp = xp + ?, total_messages = total_messages + 1, last_xp_time = datetime('now')''', (user_id, guild_id, xp, xp))
-        await self.connection.commit()
+        self.cursor.execute('''CREATE TABLE IF NOT EXISTS levels (
+            id INTEGER PRIMARY KEY,
+            level_name TEXT NOT NULL,
+            exp_needed INTEGER NOT NULL
+        )''')
 
-    async def get_user_level_data(self, user_id, guild_id):
-        # Method to get level data for a user
-        await self.cursor.execute('SELECT xp, level, total_messages FROM levels WHERE user_id = ? AND guild_id = ?', (user_id, guild_id))
-        return await self.cursor.fetchone()
+        self.cursor.execute('''CREATE TABLE IF NOT EXISTS economy (
+            id INTEGER PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            balance REAL DEFAULT 0.0,
+            last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
 
-    async def update_level(self, user_id, guild_id):
-        # Method to update a user's level based on XP
-        user_data = await self.get_user_level_data(user_id, guild_id)
-        if user_data:
-            xp, level, total_messages = user_data
-            new_level = int(xp // 100)  # Example level-up condition
-            if new_level > level:
-                await self.connection.execute('UPDATE levels SET level = ? WHERE user_id = ? AND guild_id = ?', (new_level, user_id, guild_id))
-                await self.connection.commit()
+        self.conn.commit()
 
-    async def get_top_users(self, guild_id, limit=10):
-        # Method to retrieve top users by XP
-        await self.cursor.execute('SELECT user_id, xp FROM levels WHERE guild_id = ? ORDER BY xp DESC LIMIT ?', (guild_id, limit))
-        return await self.cursor.fetchall()
+    async def add_warning(self, user_id, warning_reason):
+        self.cursor.execute('INSERT INTO warnings (user_id, warning_reason) VALUES (?, ?)', (user_id, warning_reason))
+        self.conn.commit()
 
-    async def get_balance(self, user_id, guild_id):
-        # Method to get the balance for a user
-        await self.cursor.execute('SELECT balance FROM economy WHERE user_id = ? AND guild_id = ?', (user_id, guild_id))
-        return await self.cursor.fetchone()
+    async def get_warnings(self, user_id):
+        self.cursor.execute('SELECT * FROM warnings WHERE user_id = ?', (user_id,))
+        return self.cursor.fetchall()
 
-    async def add_money(self, user_id, guild_id, amount):
-        # Method to add money to a user's balance
-        await self.connection.execute('''INSERT INTO economy (user_id, guild_id, balance) VALUES (?, ?, ?) ON CONFLICT(user_id, guild_id) DO UPDATE SET balance = balance + ?''', (user_id, guild_id, amount, amount))
-        await self.connection.commit()
+    async def add_user_profile(self, user_id, username):
+        self.cursor.execute('INSERT INTO user_profiles (user_id, username) VALUES (?, ?)', (user_id, username))
+        self.conn.commit()
 
-    async def remove_money(self, user_id, guild_id, amount):
-        # Method to remove money from a user's balance
-        await self.connection.execute('''UPDATE economy SET balance = balance - ? WHERE user_id = ? AND guild_id = ? AND balance >= ?''', (amount, user_id, guild_id, amount))
-        await self.connection.commit()
+    async def get_user_profile(self, user_id):
+        self.cursor.execute('SELECT * FROM user_profiles WHERE user_id = ?', (user_id,))
+        return self.cursor.fetchone()
 
-    async def get_last_daily(self, user_id, guild_id):
-        # Method to get last daily claim time
-        await self.cursor.execute('SELECT last_daily FROM economy WHERE user_id = ? AND guild_id = ?', (user_id, guild_id))
-        return await self.cursor.fetchone()
+    async def add_event(self, event_name, event_date):
+        self.cursor.execute('INSERT INTO events (event_name, event_date) VALUES (?, ?)', (event_name, event_date))
+        self.conn.commit()
 
-    async def update_last_daily(self, user_id, guild_id):
-        # Method to update last daily claim time
-        await self.connection.execute('UPDATE economy SET last_daily = datetime('now') WHERE user_id = ? AND guild_id = ?', (user_id, guild_id))
-        await self.connection.commit()
+    async def get_events(self):
+        self.cursor.execute('SELECT * FROM events')
+        return self.cursor.fetchall()
 
-    async def get_last_work(self, user_id, guild_id):
-        # Method to get last work claim time
-        await self.cursor.execute('SELECT last_work FROM economy WHERE user_id = ? AND guild_id = ?', (user_id, guild_id))
-        return await self.cursor.fetchone()
+    async def add_level(self, level_name, exp_needed):
+        self.cursor.execute('INSERT INTO levels (level_name, exp_needed) VALUES (?, ?)', (level_name, exp_needed))
+        self.conn.commit()
 
-    async def update_last_work(self, user_id, guild_id):
-        # Method to update last work claim time
-        await self.connection.execute('UPDATE economy SET last_work = datetime('now') WHERE user_id = ? AND guild_id = ?', (user_id, guild_id))
-        await self.connection.commit()
+    async def get_levels(self):
+        self.cursor.execute('SELECT * FROM levels')
+        return self.cursor.fetchall()
 
-    async def get_richest_users(self, guild_id, limit=10):
-        # Method to retrieve the richest users by balance
-        await self.cursor.execute('SELECT user_id, balance FROM economy WHERE guild_id = ? ORDER BY balance DESC LIMIT ?', (guild_id, limit))
-        return await self.cursor.fetchall()
+    async def update_balance(self, user_id, amount):
+        self.cursor.execute('UPDATE economy SET balance = balance + ? WHERE user_id = ?', (amount, user_id))
+        self.conn.commit()
+
+    async def get_balance(self, user_id):
+        self.cursor.execute('SELECT balance FROM economy WHERE user_id = ?', (user_id,))
+        return self.cursor.fetchone()
+
+    def close(self):
+        self.conn.close()
+
+# Create a db_manager instance
+if __name__ == '__main__':
+    db_manager = DatabaseManager('my_database.db')
+    import asyncio
+    asyncio.run(db_manager.create_tables())
