@@ -22,7 +22,7 @@ DAILY_COOLDOWN = 86400  # 24 horas en segundos
 class EconomyCog(commands.Cog):
     """Sistema de economía con Zero Coins"""
     
-def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
     
     @app_commands.command(name="balance", description="Ver tu balance de Zero Coins")
