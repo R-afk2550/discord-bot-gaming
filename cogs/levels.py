@@ -106,7 +106,6 @@ class LevelsCog(commands.Cog):
         xp = user_data['xp']
         xp_needed = self.calculate_xp_for_level(level + 1)
         xp_progress = xp - self.calculate_xp_for_level(level)
-        xp_for_current = self.calculate_xp_for_level(level)
         
         embed = discord.Embed(
             title=f"📊 Nivel de {target.name}",
@@ -149,10 +148,11 @@ class LevelsCog(commands.Cog):
         )
         
         description = ""
+        medals = {1: "🥇", 2: "🥈", 3: "🥉"}
         for i, user_data in enumerate(top_users, 1):
             user = interaction.guild.get_member(user_data['user_id'])
             if user:
-                medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
+                medal = medals.get(i, f"{i}.")
                 description += f"{medal} **{user.name}** - Nivel {user_data['level']} ({user_data['xp']} XP)\n"
         
         embed.description = description
