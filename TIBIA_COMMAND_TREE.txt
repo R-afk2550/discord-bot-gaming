@@ -1,0 +1,121 @@
+┌─────────────────────────────────────────────────────────────────┐
+│            TIBIA SYSTEM - COMMAND STRUCTURE                      │
+│                    20 Total Commands                             │
+└─────────────────────────────────────────────────────────────────┘
+
+📦 Root
+│
+├─ 🎁 /loot (Loot Tracking System)
+│  │
+│  ├─ 📝 registrar
+│  │  └─ Register a loot drop
+│  │     Parameters: boss, items, valor
+│  │     Database: ✅ Persists to tibia_loots table
+│  │
+│  ├─ 📋 historial
+│  │  └─ View loot history
+│  │     Parameters: usuario (optional)
+│  │     Shows: Last 10 loots with timestamps
+│  │
+│  ├─ 📊 stats
+│  │  └─ View statistics
+│  │     Parameters: usuario (optional)
+│  │     Shows: Total earned, count, best, average
+│  │
+│  ├─ 🏆 mejores
+│  │  └─ Leaderboard of best loots
+│  │     Shows: Top 10 most valuable loots
+│  │
+│  └─ 💰 total
+│     └─ Total value accumulated
+│        Parameters: usuario (optional)
+│        Shows: Sum of all loot values
+│
+└─ 🗡️ /tibia (Game Information)
+   │
+   ├─ 👤 Character & Player Info
+   │  │
+   │  ├─ char
+   │  │  └─ Character statistics
+   │  │     API: /character/{name}
+   │  │     Shows: Level, vocation, guild, status
+   │  │
+   │  ├─ deaths
+   │  │  └─ Death history
+   │  │     API: /character/{name}
+   │  │     Shows: Last 10 deaths with details
+   │  │
+   │  └─ guild
+   │     └─ Guild information
+   │        API: /guild/{name}
+   │        Shows: Members, ranks, guildhall
+   │
+   ├─ 🌍 World Information
+   │  │
+   │  ├─ worlds
+   │  │  └─ List all worlds
+   │  │     API: /worlds
+   │  │     Shows: All servers with online counts
+   │  │
+   │  ├─ world
+   │  │  └─ Specific world details
+   │  │     API: /world/{name}
+   │  │     Shows: PvP type, location, creation date
+   │  │
+   │  ├─ online
+   │  │  └─ Online players list
+   │  │     API: /world/{name}
+   │  │     Shows: Players with levels and vocations
+   │  │
+   │  └─ battleye
+   │     └─ BattlEye protected worlds
+   │        API: /worlds
+   │        Shows: Worlds with anti-cheat protection
+   │
+   ├─ 🎮 Game Tools
+   │  │
+   │  ├─ boosted
+   │  │  └─ Boosted creature of the day
+   │  │     API: /boostablebosses
+   │  │     Shows: Today's boosted creature
+   │  │
+   │  ├─ rashid
+   │  │  └─ Rashid NPC location
+   │  │     Data: Static weekly schedule
+   │  │     Shows: Today's location + full schedule
+   │  │
+   │  ├─ exp
+   │  │  └─ Experience calculator
+   │  │     Calculates: XP needed for level range
+   │  │     Parameters: nivel_actual, nivel_objetivo
+   │  │
+   │  └─ stamina
+   │     └─ Stamina calculator
+   │        Calculates: XP bonus from stamina
+   │        Parameters: horas (stamina hours)
+   │
+   └─ 📰 News & Events
+      │
+      ├─ news
+      │  └─ Latest official news
+      │     API: /news/latest
+      │     Shows: Recent announcements
+      │
+      ├─ events
+      │  └─ Active events
+      │     Shows: Current in-game events
+      │
+      ├─ rapid
+      │  └─ Rapid Respawn info
+      │     Static info about event
+      │
+      └─ doublexp
+         └─ Double XP info
+            Static info about event
+
+┌─────────────────────────────────────────────────────────────────┐
+│ LEGEND                                                           │
+│ ✅ = Database persistence                                        │
+│ API = External API call to TibiaData v4                         │
+│ Static = Local data, no external calls                          │
+└─────────────────────────────────────────────────────────────────┘
