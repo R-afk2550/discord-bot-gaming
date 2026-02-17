@@ -83,6 +83,19 @@ class DatabaseManager:
                 )
             ''')
             
+            # Tabla de loots de Tibia
+            await db.execute('''
+                CREATE TABLE IF NOT EXISTS tibia_loots (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    guild_id INTEGER NOT NULL,
+                    boss_name TEXT NOT NULL,
+                    items TEXT NOT NULL,
+                    value INTEGER DEFAULT 0,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
             await db.commit()
             logger.info("Base de datos inicializada correctamente")
     
@@ -331,6 +344,85 @@ class DatabaseManager:
             ) as cursor:
                 rows = await cursor.fetchall()
                 return [dict(row) for row in rows]
+    
+    # ===== MÉTODOS PARA TIBIA LOOTS =====
+    
+    async def add_tibia_loot(self, user_id: int, guild_id: int, boss_name: str, 
+                            items: str, value: int):
+        """Añade un registro de loot de Tibia"""
+        async with aiosqlite.connect(self.db_name) as db:
+            await db.execute(
+                '''INSERT INTO tibia_loots (user_id, guild_id, boss_name, items, value) 
+                   VALUES (?, ?, ?, ?, ?)''',
+                (user_id, guild_id, boss_name, items, value)
+            )
+            await db.commit()
+            logger.info(f"Loot de Tibia registrado: {boss_name} - {value}gp")
+    
+    async def get_user_loots(self, user_id: int, guild_id: int, limit: int = 10) -> List[Dict]:
+        """Obtiene el historial de loots de un usuario"""
+        async with aiosqlite.connect(self.db_name) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute(
+                '''SELECT * FROM tibia_loots 
+                   WHERE user_id = ? AND guild_id = ? 
+                   ORDER BY timestamp DESC LIMIT ?''',
+                (user_id, guild_id, limit)
+            ) as cursor:
+                rows = await cursor.fetchall()
+                return [dict(row) for row in rows]
+    
+    async def get_boss_stats(self, guild_id: int, boss_name: str = None) -> List[Dict]:
+        """Obtiene estadísticas de drops por criatura"""
+        async with aiosqlite.connect(self.db_name) as db:
+            db.row_factory = aiosqlite.Row
+            if boss_name:
+                async with db.execute(
+                    '''SELECT boss_name, COUNT(*) as kills, AVG(value) as avg_value, 
+                       SUM(value) as total_value, MAX(value) as best_loot
+                       FROM tibia_loots 
+                       WHERE guild_id = ? AND boss_name = ?
+                       GROUP BY boss_name''',
+                    (guild_id, boss_name)
+                ) as cursor:
+                    row = await cursor.fetchone()
+                    return [dict(row)] if row else []
+            else:
+                async with db.execute(
+                    '''SELECT boss_name, COUNT(*) as kills, AVG(value) as avg_value, 
+                       SUM(value) as total_value, MAX(value) as best_loot
+                       FROM tibia_loots 
+                       WHERE guild_id = ?
+                       GROUP BY boss_name
+                       ORDER BY kills DESC
+                       LIMIT 10''',
+                    (guild_id,)
+                ) as cursor:
+                    rows = await cursor.fetchall()
+                    return [dict(row) for row in rows]
+    
+    async def get_top_loots(self, guild_id: int, limit: int = 10) -> List[Dict]:
+        """Obtiene los mejores loots registrados"""
+        async with aiosqlite.connect(self.db_name) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute(
+                '''SELECT * FROM tibia_loots 
+                   WHERE guild_id = ? 
+                   ORDER BY value DESC LIMIT ?''',
+                (guild_id, limit)
+            ) as cursor:
+                rows = await cursor.fetchall()
+                return [dict(row) for row in rows]
+    
+    async def get_total_loot_value(self, user_id: int, guild_id: int) -> int:
+        """Obtiene el valor total de loots ganados por un usuario"""
+        async with aiosqlite.connect(self.db_name) as db:
+            async with db.execute(
+                'SELECT SUM(value) FROM tibia_loots WHERE user_id = ? AND guild_id = ?',
+                (user_id, guild_id)
+            ) as cursor:
+                result = await cursor.fetchone()
+                return result[0] if result and result[0] else 0
 
 
 # Instancia global del gestor de base de datos
