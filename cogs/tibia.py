@@ -189,6 +189,8 @@ class TibiaCog(commands.Cog):
         
         # Calcular totales
         total_value = sum(item['value'] for item in items)
+        # División entera: cualquier oro restante (total % participantes) queda sin repartir
+        # Esto es intencional y común en MMORPGs como Tibia
         per_person = total_value // len(participants)
         
         # Cerrar la sesión

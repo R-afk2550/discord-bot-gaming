@@ -116,6 +116,7 @@ class DatabaseManager:
                     session_id INTEGER NOT NULL,
                     user_id INTEGER NOT NULL,
                     added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(session_id, user_id),
                     FOREIGN KEY (session_id) REFERENCES tibia_loot_sessions (id)
                 )
             ''')
@@ -413,20 +414,17 @@ class DatabaseManager:
                 return [dict(row) for row in rows]
     
     async def add_tibia_participant(self, session_id: int, user_id: int):
-        """Añade un participante a una sesión de loot"""
+        """Añade un participante a una sesión de loot (ignora si ya existe)"""
         async with aiosqlite.connect(self.db_name) as db:
-            # Verificar si ya está añadido
-            async with db.execute(
-                'SELECT COUNT(*) FROM tibia_loot_participants WHERE session_id = ? AND user_id = ?',
-                (session_id, user_id)
-            ) as cursor:
-                result = await cursor.fetchone()
-                if result[0] == 0:
-                    await db.execute(
-                        'INSERT INTO tibia_loot_participants (session_id, user_id) VALUES (?, ?)',
-                        (session_id, user_id)
-                    )
-                    await db.commit()
+            try:
+                await db.execute(
+                    'INSERT INTO tibia_loot_participants (session_id, user_id) VALUES (?, ?)',
+                    (session_id, user_id)
+                )
+                await db.commit()
+            except aiosqlite.IntegrityError:
+                # El participante ya existe, ignorar silenciosamente
+                pass
     
     async def get_tibia_participants(self, session_id: int) -> List[Dict]:
         """Obtiene todos los participantes de una sesión"""
