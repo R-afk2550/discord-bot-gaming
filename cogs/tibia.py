@@ -18,6 +18,11 @@ logger = logging.getLogger('discord_bot')
 TIBIA_BLUE = 0x1D4E89
 TIBIA_GREEN = 0x00A86B
 TIBIA_API_BASE = "https://api.tibiadata.com/v4"
+CACHE_DURATION = 300  # 5 minutos en segundos
+MAX_CACHE_ENTRIES = 100  # Límite de entradas en caché
+TOP_PLAYERS_LIMIT = 20  # Límite de jugadores top a mostrar
+MAX_DESCRIPTION_LENGTH = 200  # Longitud máxima para descripciones
+MAX_ITEMS_LENGTH = 100  # Longitud máxima para lista de items
 
 # Ubicaciones de Rashid por día de la semana (0=Lunes, 6=Domingo)
 RASHID_LOCATIONS = {
@@ -30,10 +35,6 @@ RASHID_LOCATIONS = {
     6: {"city": "Carlin", "location": "Tuck's tavern, second floor"}
 }
 
-# Cache simple para respuestas de API (5 minutos)
-api_cache = {}
-CACHE_DURATION = 300  # 5 minutos en segundos
-
 
 class TibiaCog(commands.Cog):
     """Sistema completo de integración con Tibia"""
@@ -41,17 +42,40 @@ class TibiaCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.session = None
+        self.api_cache = {}  # Cache a nivel de instancia
+        self.session_lock = asyncio.Lock()  # Lock para crear sesión de forma segura
     
     async def cog_load(self):
         """Inicializa la sesión de aiohttp al cargar el cog"""
-        self.session = aiohttp.ClientSession()
-        logger.info("Sesión HTTP inicializada para TibiaCog")
+        async with self.session_lock:
+            if self.session is None:
+                self.session = aiohttp.ClientSession()
+                logger.info("Sesión HTTP inicializada para TibiaCog")
     
     async def cog_unload(self):
         """Cierra la sesión de aiohttp al descargar el cog"""
         if self.session:
             await self.session.close()
             logger.info("Sesión HTTP cerrada para TibiaCog")
+    
+    def _cleanup_cache(self):
+        """Limpia entradas expiradas del caché"""
+        now = datetime.now()
+        expired_keys = [
+            key for key, (_, timestamp) in self.api_cache.items()
+            if (now - timestamp).total_seconds() >= CACHE_DURATION
+        ]
+        for key in expired_keys:
+            del self.api_cache[key]
+        
+        # Si el caché sigue siendo muy grande, eliminar las entradas más antiguas
+        if len(self.api_cache) > MAX_CACHE_ENTRIES:
+            sorted_cache = sorted(
+                self.api_cache.items(),
+                key=lambda x: x[1][1]
+            )
+            for key, _ in sorted_cache[:len(self.api_cache) - MAX_CACHE_ENTRIES]:
+                del self.api_cache[key]
     
     # ===== FUNCIONES AUXILIARES =====
     
@@ -67,23 +91,29 @@ class TibiaCog(commands.Cog):
         """
         url = f"{TIBIA_API_BASE}{endpoint}"
         
+        # Limpiar caché periódicamente
+        self._cleanup_cache()
+        
         # Verificar caché
         cache_key = url
-        if cache_key in api_cache:
-            cached_data, timestamp = api_cache[cache_key]
+        if cache_key in self.api_cache:
+            cached_data, timestamp = self.api_cache[cache_key]
             if (datetime.now() - timestamp).total_seconds() < CACHE_DURATION:
                 logger.debug(f"Usando caché para {endpoint}")
                 return cached_data
         
         try:
+            # Asegurar que la sesión existe con lock
             if not self.session:
-                self.session = aiohttp.ClientSession()
+                async with self.session_lock:
+                    if not self.session:
+                        self.session = aiohttp.ClientSession()
             
             async with self.session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
                 if response.status == 200:
                     data = await response.json()
                     # Guardar en caché
-                    api_cache[cache_key] = (data, datetime.now())
+                    self.api_cache[cache_key] = (data, datetime.now())
                     logger.debug(f"API request exitoso: {endpoint}")
                     return data
                 else:
@@ -231,9 +261,14 @@ class TibiaCog(commands.Cog):
                 timestamp = datetime.fromisoformat(loot['timestamp'])
                 value_str = f"{self.format_number(loot['value'])} gp" if loot['value'] > 0 else "N/A"
                 
+                # Truncar items solo si es necesario
+                items_text = loot['items']
+                if len(items_text) > MAX_ITEMS_LENGTH:
+                    items_text = items_text[:MAX_ITEMS_LENGTH] + "..."
+                
                 embed.add_field(
                     name=f"🗡️ {loot['boss_name']}",
-                    value=f"**Items:** {loot['items'][:100]}...\n**Valor:** {value_str}\n**Fecha:** {timestamp.strftime('%d/%m/%Y %H:%M')}",
+                    value=f"**Items:** {items_text}\n**Valor:** {value_str}\n**Fecha:** {timestamp.strftime('%d/%m/%Y %H:%M')}",
                     inline=False
                 )
             
@@ -331,7 +366,13 @@ class TibiaCog(commands.Cog):
             )
             
             for i, loot in enumerate(top_loots, 1):
-                user = await self.bot.fetch_user(loot['user_id'])
+                # Usar get_user primero (cache) antes de fetch_user
+                user = self.bot.get_user(loot['user_id'])
+                if not user:
+                    try:
+                        user = await self.bot.fetch_user(loot['user_id'])
+                    except:
+                        pass
                 username = user.name if user else "Usuario Desconocido"
                 timestamp = datetime.fromisoformat(loot['timestamp'])
                 
@@ -492,8 +533,8 @@ class TibiaCog(commands.Cog):
             )
             
             if online_players:
-                # Mostrar top 20 jugadores por nivel
-                top_players = sorted(online_players, key=lambda x: x['level'], reverse=True)[:20]
+                # Mostrar top jugadores por nivel
+                top_players = sorted(online_players, key=lambda x: x['level'], reverse=True)[:TOP_PLAYERS_LIMIT]
                 
                 players_text = "\n".join([
                     f"**{p['name']}** - Lvl {p['level']} ({p['vocation']})"
@@ -501,7 +542,7 @@ class TibiaCog(commands.Cog):
                 ])
                 
                 embed.add_field(
-                    name=f"Top 20 por Nivel",
+                    name=f"Top {TOP_PLAYERS_LIMIT} por Nivel",
                     value=players_text[:1024] if len(players_text) < 1024 else players_text[:1020] + "...",
                     inline=False
                 )
@@ -593,9 +634,14 @@ class TibiaCog(commands.Cog):
             
             guild_data = data['guild']['guild']
             
+            # Truncar descripción si es necesario
+            description = guild_data.get('description', 'Sin descripción')
+            if len(description) > MAX_DESCRIPTION_LENGTH:
+                description = description[:MAX_DESCRIPTION_LENGTH] + "..."
+            
             embed = discord.Embed(
                 title=f"🛡️ {guild_data['name']}",
-                description=guild_data.get('description', 'Sin descripción')[:200],
+                description=description,
                 color=TIBIA_BLUE
             )
             
