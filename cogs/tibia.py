@@ -1026,6 +1026,129 @@ class TibiaCog(commands.Cog):
         
         await interaction.response.send_message(embed=embed)
     
+    @tibia_group.command(name="skills", description="Calcular tiempo de training de skills")
+    @app_commands.describe(
+        skill_actual="Nivel de skill actual",
+        skill_objetivo="Nivel de skill objetivo",
+        vocacion="Vocación del personaje (knight, paladin, mage)"
+    )
+    async def tibia_skills(
+        self, 
+        interaction: discord.Interaction, 
+        skill_actual: int, 
+        skill_objetivo: int,
+        vocacion: str = "knight"
+    ):
+        """Calcula el tiempo aproximado de training para skills"""
+        # Validaciones
+        if skill_actual < 10 or skill_objetivo < 10:
+            await interaction.response.send_message(
+                "❌ Los skills deben ser al menos 10.",
+                ephemeral=True
+            )
+            return
+        
+        if skill_objetivo <= skill_actual:
+            await interaction.response.send_message(
+                "❌ El skill objetivo debe ser mayor al skill actual.",
+                ephemeral=True
+            )
+            return
+        
+        if skill_objetivo > 150:
+            await interaction.response.send_message(
+                "❌ El skill objetivo no puede ser mayor a 150.",
+                ephemeral=True
+            )
+            return
+        
+        # Normalizar vocación
+        vocacion = vocacion.lower()
+        vocations_valid = ["knight", "paladin", "mage", "druid", "sorcerer"]
+        if vocacion not in vocations_valid:
+            await interaction.response.send_message(
+                f"❌ Vocación inválida. Usa: {', '.join(vocations_valid)}",
+                ephemeral=True
+            )
+            return
+        
+        # Cálculo aproximado de tries necesarios
+        # Fórmula simplificada: tries = (skill_objetivo^2 - skill_actual^2) * multiplicador
+        tries_per_level = {
+            "knight": 50,  # Melee skills
+            "paladin": 30,  # Distance
+            "mage": 70,    # Magic level (más difícil)
+            "druid": 70,
+            "sorcerer": 70
+        }
+        
+        multiplier = tries_per_level.get(vocacion, 50)
+        total_tries = 0
+        
+        for skill in range(skill_actual, skill_objetivo):
+            total_tries += int((skill ** 2) * multiplier)
+        
+        # Estimaciones de tiempo (tries por hora en diferentes condiciones)
+        tries_per_hour_offline = 7200  # Training offline (dummy)
+        tries_per_hour_exercise = 36000  # Exercise weapons (rápido pero caro)
+        tries_per_hour_online = 14400  # Training online (dummies mejorados)
+        
+        hours_offline = total_tries / tries_per_hour_offline
+        hours_exercise = total_tries / tries_per_hour_exercise
+        hours_online = total_tries / tries_per_hour_online
+        
+        # Convertir a días si es más de 24 horas
+        def format_time(hours):
+            if hours > 24:
+                days = hours / 24
+                return f"~{days:.1f} días"
+            else:
+                return f"~{hours:.1f} horas"
+        
+        embed = discord.Embed(
+            title="🧮 Calculadora de Skills",
+            color=TIBIA_BLUE
+        )
+        
+        embed.add_field(
+            name="Skills",
+            value=f"**{skill_actual}** → **{skill_objetivo}**",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="Vocación",
+            value=f"🎯 {vocacion.capitalize()}",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="Tries Necesarios",
+            value=f"📊 {self.format_number(total_tries)} tries",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="⏱️ Tiempo Estimado",
+            value=f"**Offline Training:** {format_time(hours_offline)}\n"
+                  f"**Online Training:** {format_time(hours_online)}\n"
+                  f"**Exercise Weapons:** {format_time(hours_exercise)}",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="💡 Recomendación",
+            value="Combina diferentes métodos para optimizar tiempo y costo:\n"
+                  "• Exercise weapons para avances rápidos\n"
+                  "• Offline training constante\n"
+                  "• Online training cuando tengas tiempo",
+            inline=False
+        )
+        
+        embed.set_footer(text="Estimaciones aproximadas • Los valores reales pueden variar")
+        
+        await interaction.response.send_message(embed=embed)
+    
     # ===== MÓDULO 6: UBICACIÓN DE RASHID =====
     
     @tibia_group.command(name="rashid", description="Ver ubicación actual de Rashid")
@@ -1068,7 +1191,121 @@ class TibiaCog(commands.Cog):
         
         await interaction.response.send_message(embed=embed)
     
-    # ===== MÓDULO 7: NOTICIAS DE TIBIA =====
+    # ===== MÓDULO 7: HUNTING SPOTS =====
+    
+    @tibia_group.command(name="hunt", description="Sugerencias de hunting spots por nivel")
+    @app_commands.describe(
+        nivel="Nivel del personaje",
+        vocacion="Vocación del personaje (opcional)"
+    )
+    async def tibia_hunt(
+        self, 
+        interaction: discord.Interaction, 
+        nivel: int,
+        vocacion: str = None
+    ):
+        """Sugiere lugares de caza según el nivel del personaje"""
+        # Validación
+        if nivel < 1 or nivel > 1500:
+            await interaction.response.send_message(
+                "❌ El nivel debe estar entre 1 y 1500.",
+                ephemeral=True
+            )
+            return
+        
+        # Normalizar vocación si se proporciona
+        if vocacion:
+            vocacion = vocacion.lower()
+            valid_vocations = ["knight", "paladin", "sorcerer", "druid", "ek", "rp", "ms", "ed"]
+            if vocacion not in valid_vocations:
+                await interaction.response.send_message(
+                    f"❌ Vocación inválida. Usa: knight, paladin, sorcerer, druid",
+                    ephemeral=True
+                )
+                return
+        
+        # Base de datos de hunting spots por nivel
+        hunting_spots = [
+            {"min": 1, "max": 20, "name": "Rookgaard Rats & Trolls", "exp": "100-500/h", "profit": "Bajo"},
+            {"min": 8, "max": 30, "name": "Edron Trolls & Goblins", "exp": "5k-15k/h", "profit": "Bajo"},
+            {"min": 20, "max": 40, "name": "Mistrock Cyclops", "exp": "20k-40k/h", "profit": "Medio"},
+            {"min": 30, "max": 60, "name": "Venore Amazons", "exp": "30k-60k/h", "profit": "Medio"},
+            {"min": 40, "max": 80, "name": "Port Hope Tarantulas", "exp": "50k-100k/h", "profit": "Medio"},
+            {"min": 50, "max": 100, "name": "Yalahar Mutated Humans", "exp": "100k-200k/h", "profit": "Alto"},
+            {"min": 60, "max": 100, "name": "Edron Vampires", "exp": "100k-150k/h", "profit": "Bajo"},
+            {"min": 80, "max": 130, "name": "Krailos Nightmares", "exp": "200k-400k/h", "profit": "Medio"},
+            {"min": 100, "max": 150, "name": "Oramond Minos", "exp": "400k-600k/h", "profit": "Alto"},
+            {"min": 120, "max": 180, "name": "Asura Palace", "exp": "600k-1kk/h", "profit": "Muy Alto"},
+            {"min": 150, "max": 250, "name": "Carnivors Rock", "exp": "800k-1.5kk/h", "profit": "Alto"},
+            {"min": 180, "max": 300, "name": "Roshamuul West", "exp": "1kk-2kk/h", "profit": "Medio"},
+            {"min": 200, "max": 350, "name": "Summer Court", "exp": "1.5kk-3kk/h", "profit": "Alto"},
+            {"min": 250, "max": 400, "name": "Winter Court", "exp": "2kk-4kk/h", "profit": "Alto"},
+            {"min": 300, "max": 500, "name": "Flimsies (Issavi)", "exp": "3kk-5kk/h", "profit": "Muy Alto"},
+            {"min": 350, "max": 600, "name": "Cobras (Nimmersatt)", "exp": "4kk-7kk/h", "profit": "Muy Alto"},
+            {"min": 400, "max": 700, "name": "Falcon Bastion", "exp": "5kk-8kk/h", "profit": "Medio"},
+            {"min": 500, "max": 1000, "name": "Soul War", "exp": "7kk-12kk/h", "profit": "Alto"},
+            {"min": 600, "max": 1500, "name": "Library (Asuras/Grims)", "exp": "10kk-15kk/h", "profit": "Muy Alto"}
+        ]
+        
+        # Filtrar spots apropiados para el nivel
+        suitable_spots = [
+            spot for spot in hunting_spots 
+            if spot["min"] <= nivel <= spot["max"]
+        ]
+        
+        # Si no hay spots exactos, buscar los más cercanos
+        if not suitable_spots:
+            # Buscar spots ligeramente por encima o por debajo
+            for tolerance in [50, 100, 150, 200]:
+                suitable_spots = [
+                    spot for spot in hunting_spots 
+                    if spot["min"] - tolerance <= nivel <= spot["max"] + tolerance
+                ]
+                if suitable_spots:
+                    break
+        
+        if not suitable_spots:
+            suitable_spots = hunting_spots[-3:]  # Mostrar los de nivel más alto
+        
+        # Limitar a 5 sugerencias
+        suitable_spots = suitable_spots[:5]
+        
+        embed = discord.Embed(
+            title="🗺️ Hunting Spots Recomendados",
+            description=f"Sugerencias para nivel **{nivel}**" + (f" ({vocacion})" if vocacion else ""),
+            color=TIBIA_GREEN
+        )
+        
+        for i, spot in enumerate(suitable_spots, 1):
+            profit_emoji = {
+                "Bajo": "💰",
+                "Medio": "💰💰",
+                "Alto": "💰💰💰",
+                "Muy Alto": "💰💰💰💰"
+            }.get(spot["profit"], "💰")
+            
+            embed.add_field(
+                name=f"{i}. {spot['name']}",
+                value=f"**Nivel:** {spot['min']}-{spot['max']}\n"
+                      f"**XP/h:** {spot['exp']}\n"
+                      f"**Profit:** {profit_emoji} {spot['profit']}",
+                inline=True
+            )
+        
+        embed.add_field(
+            name="💡 Consejos",
+            value="• Usa la criatura boosted del día cuando sea posible\n"
+                  "• Caza en party para mejor XP y profit\n"
+                  "• Mantén stamina verde (40h+) para bonus\n"
+                  "• Considera usar preys para mejor eficiencia",
+            inline=False
+        )
+        
+        embed.set_footer(text="Las tasas de XP y profit pueden variar según equipo y skills")
+        
+        await interaction.response.send_message(embed=embed)
+    
+    # ===== MÓDULO 8: NOTICIAS DE TIBIA =====
     
     @tibia_group.command(name="news", description="Ver últimas noticias de Tibia")
     async def tibia_news(self, interaction: discord.Interaction):
@@ -1122,7 +1359,7 @@ class TibiaCog(commands.Cog):
                 ephemeral=True
             )
     
-    # ===== MÓDULO 8: EVENTOS DEL JUEGO =====
+    # ===== MÓDULO 9: EVENTOS DEL JUEGO =====
     
     @tibia_group.command(name="events", description="Ver eventos activos en Tibia")
     async def tibia_events(self, interaction: discord.Interaction):
