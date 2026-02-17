@@ -813,12 +813,6 @@ class TibiaCog(commands.Cog):
     
     # ===== MÓDULO 4: CRIATURA/BOSS BOOSTED =====
     
-    boosted_group = app_commands.Group(
-        name="boosted",
-        description="Información sobre criaturas boosted",
-        parent=tibia_group
-    )
-    
     @tibia_group.command(name="boosted", description="Ver criatura boosted del día")
     async def tibia_boosted(self, interaction: discord.Interaction):
         """Muestra la criatura boosted del día actual"""
