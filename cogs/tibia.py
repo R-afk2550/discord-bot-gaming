@@ -1073,8 +1073,8 @@ class TibiaCog(commands.Cog):
             return
         
         # Cálculo aproximado de tries necesarios
-        # Fórmula simplificada: tries = (skill_objetivo^2 - skill_actual^2) * multiplicador
-        tries_per_level = {
+        # Fórmula simplificada: tries = (skill^2) * multiplicador_base
+        skill_multiplier = {
             "knight": 50,  # Melee skills
             "paladin": 30,  # Distance
             "mage": 70,    # Magic level (más difícil)
@@ -1082,7 +1082,7 @@ class TibiaCog(commands.Cog):
             "sorcerer": 70
         }
         
-        multiplier = tries_per_level.get(vocacion, 50)
+        multiplier = skill_multiplier.get(vocacion, 50)
         total_tries = 0
         
         for skill in range(skill_actual, skill_objetivo):
@@ -1254,9 +1254,12 @@ class TibiaCog(commands.Cog):
         ]
         
         # Si no hay spots exactos, buscar los más cercanos
+        # Tolerancias de nivel para ampliar la búsqueda gradualmente
+        LEVEL_TOLERANCE_STEPS = [50, 100, 150, 200]
+        
         if not suitable_spots:
-            # Buscar spots ligeramente por encima o por debajo
-            for tolerance in [50, 100, 150, 200]:
+            # Buscar spots con tolerancia creciente hasta encontrar opciones
+            for tolerance in LEVEL_TOLERANCE_STEPS:
                 suitable_spots = [
                     spot for spot in hunting_spots 
                     if spot["min"] - tolerance <= nivel <= spot["max"] + tolerance
