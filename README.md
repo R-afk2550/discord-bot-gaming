@@ -175,6 +175,24 @@ Crea estos canales en tu servidor para mejor experiencia:
 | `/lfg_lol <rol> [rango]` | Buscar grupo para LoL | `/lfg_lol Mid Diamond` |
 | `/lfg_wow <tipo> <rol>` | Buscar grupo para WoW | `/lfg_wow Mythic+ DPS` |
 
+### 🗡️ Tibia - Gestión de Loot
+
+| Comando | Descripción | Ejemplo |
+|---------|-------------|---------|
+| `/tibia_loot_start` | Inicia una sesión de loot en el canal actual | `/tibia_loot_start` |
+| `/tibia_loot_join` | Únete como participante a la sesión activa | `/tibia_loot_join` |
+| `/tibia_loot_add <item> <cantidad> <valor>` | Añade un item al loot | `/tibia_loot_add "Crown Legs" 1 12000` |
+| `/tibia_loot_info` | Muestra información de la sesión activa | `/tibia_loot_info` |
+| `/tibia_loot_split` | Calcula y muestra la división del loot (cierra sesión) | `/tibia_loot_split` |
+| `/tibia_loot_cancel` | Cancela la sesión activa (requiere permisos) | `/tibia_loot_cancel` |
+
+**Flujo de uso típico:**
+1. El líder usa `/tibia_loot_start` al comenzar el hunt
+2. Todos los participantes usan `/tibia_loot_join`
+3. Durante el hunt, cualquiera añade items con `/tibia_loot_add`
+4. Al finalizar, alguien usa `/tibia_loot_split` para ver la división
+5. El bot calcula automáticamente cuánto le toca a cada uno
+
 ### 🛡️ Moderación
 
 | Comando | Descripción | Permisos |
