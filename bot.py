@@ -76,7 +76,8 @@ class GamingBot(commands.Bot):
             'events',
             'levels',
             'economy',
-            'logging'
+            'logging',
+            'tibia'
         ]
         
         for cog_file in cog_files:

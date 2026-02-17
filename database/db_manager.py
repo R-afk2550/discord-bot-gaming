@@ -83,6 +83,44 @@ class DatabaseManager:
                 )
             ''')
             
+            # Tabla de sesiones de loot de Tibia
+            await db.execute('''
+                CREATE TABLE IF NOT EXISTS tibia_loot_sessions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    guild_id INTEGER NOT NULL,
+                    channel_id INTEGER NOT NULL,
+                    creator_id INTEGER NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    closed BOOLEAN DEFAULT 0
+                )
+            ''')
+            
+            # Tabla de items de loot de Tibia
+            await db.execute('''
+                CREATE TABLE IF NOT EXISTS tibia_loot_items (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id INTEGER NOT NULL,
+                    item_name TEXT NOT NULL,
+                    quantity INTEGER NOT NULL,
+                    value INTEGER NOT NULL,
+                    added_by INTEGER NOT NULL,
+                    added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (session_id) REFERENCES tibia_loot_sessions (id)
+                )
+            ''')
+            
+            # Tabla de participantes de sesiones de Tibia
+            await db.execute('''
+                CREATE TABLE IF NOT EXISTS tibia_loot_participants (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(session_id, user_id),
+                    FOREIGN KEY (session_id) REFERENCES tibia_loot_sessions (id)
+                )
+            ''')
+            
             await db.commit()
             logger.info("Base de datos inicializada correctamente")
     
@@ -331,6 +369,82 @@ class DatabaseManager:
             ) as cursor:
                 rows = await cursor.fetchall()
                 return [dict(row) for row in rows]
+    
+    # ===== MÉTODOS PARA LOOT DE TIBIA =====
+    
+    async def create_tibia_loot_session(self, guild_id: int, channel_id: int, creator_id: int) -> int:
+        """Crea una nueva sesión de loot de Tibia y retorna el ID"""
+        async with aiosqlite.connect(self.db_name) as db:
+            cursor = await db.execute(
+                'INSERT INTO tibia_loot_sessions (guild_id, channel_id, creator_id) VALUES (?, ?, ?)',
+                (guild_id, channel_id, creator_id)
+            )
+            await db.commit()
+            return cursor.lastrowid
+    
+    async def get_active_tibia_session(self, channel_id: int) -> Optional[Dict]:
+        """Obtiene la sesión activa de loot en un canal"""
+        async with aiosqlite.connect(self.db_name) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute(
+                'SELECT * FROM tibia_loot_sessions WHERE channel_id = ? AND closed = 0 ORDER BY created_at DESC LIMIT 1',
+                (channel_id,)
+            ) as cursor:
+                row = await cursor.fetchone()
+                return dict(row) if row else None
+    
+    async def add_tibia_loot_item(self, session_id: int, item_name: str, quantity: int, value: int, added_by: int):
+        """Añade un item al loot de Tibia"""
+        async with aiosqlite.connect(self.db_name) as db:
+            await db.execute(
+                'INSERT INTO tibia_loot_items (session_id, item_name, quantity, value, added_by) VALUES (?, ?, ?, ?, ?)',
+                (session_id, item_name, quantity, value, added_by)
+            )
+            await db.commit()
+    
+    async def get_tibia_loot_items(self, session_id: int) -> List[Dict]:
+        """Obtiene todos los items de loot de una sesión"""
+        async with aiosqlite.connect(self.db_name) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute(
+                'SELECT * FROM tibia_loot_items WHERE session_id = ? ORDER BY added_at ASC',
+                (session_id,)
+            ) as cursor:
+                rows = await cursor.fetchall()
+                return [dict(row) for row in rows]
+    
+    async def add_tibia_participant(self, session_id: int, user_id: int):
+        """Añade un participante a una sesión de loot (ignora si ya existe)"""
+        async with aiosqlite.connect(self.db_name) as db:
+            try:
+                await db.execute(
+                    'INSERT INTO tibia_loot_participants (session_id, user_id) VALUES (?, ?)',
+                    (session_id, user_id)
+                )
+                await db.commit()
+            except aiosqlite.IntegrityError:
+                # El participante ya existe, ignorar silenciosamente
+                pass
+    
+    async def get_tibia_participants(self, session_id: int) -> List[Dict]:
+        """Obtiene todos los participantes de una sesión"""
+        async with aiosqlite.connect(self.db_name) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute(
+                'SELECT * FROM tibia_loot_participants WHERE session_id = ? ORDER BY added_at ASC',
+                (session_id,)
+            ) as cursor:
+                rows = await cursor.fetchall()
+                return [dict(row) for row in rows]
+    
+    async def close_tibia_session(self, session_id: int):
+        """Cierra una sesión de loot"""
+        async with aiosqlite.connect(self.db_name) as db:
+            await db.execute(
+                'UPDATE tibia_loot_sessions SET closed = 1 WHERE id = ?',
+                (session_id,)
+            )
+            await db.commit()
 
 
 # Instancia global del gestor de base de datos
