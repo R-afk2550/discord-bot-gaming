@@ -160,3 +160,69 @@ def create_serverinfo_embed(guild: discord.Guild) -> discord.Embed:
     embed.add_field(name="🎭 Roles", value=len(guild.roles), inline=True)
     
     return embed
+
+
+def create_tibia_loot_session_embed(session_id: int, creator: discord.Member) -> discord.Embed:
+    """Crea un embed para una nueva sesión de loot de Tibia"""
+    embed = discord.Embed(
+        title="🗡️ Sesión de Loot de Tibia Iniciada",
+        description=f"Sesión de loot iniciada por {creator.mention}",
+        color=COLORS['success'],
+        timestamp=datetime.now(timezone.utc)
+    )
+    embed.add_field(name="ID de Sesión", value=f"#{session_id}", inline=True)
+    embed.add_field(
+        name="📋 Instrucciones",
+        value=(
+            "**Participantes**: Usa `/tibia_loot_join` para unirte\n"
+            "**Agregar loot**: Usa `/tibia_loot_add` para añadir items\n"
+            "**Repartir**: Usa `/tibia_loot_split` para calcular división"
+        ),
+        inline=False
+    )
+    embed.set_footer(text="Usa los comandos para gestionar el loot")
+    return embed
+
+
+def create_tibia_loot_summary_embed(items: list, participants: list, total_value: int, per_person: int) -> discord.Embed:
+    """Crea un embed con el resumen del loot de Tibia"""
+    embed = discord.Embed(
+        title="🗡️ Resumen de Loot de Tibia",
+        description="Distribución equitativa del loot",
+        color=COLORS['info'],
+        timestamp=datetime.now(timezone.utc)
+    )
+    
+    # Resumen de items
+    if items:
+        items_text = []
+        for item in items[:20]:  # Limitar a 20 items para no saturar
+            items_text.append(f"• **{item['item_name']}** x{item['quantity']} - {item['value']:,} gp")
+        
+        if len(items) > 20:
+            items_text.append(f"... y {len(items) - 20} items más")
+        
+        embed.add_field(
+            name=f"📦 Items ({len(items)} total)",
+            value="\n".join(items_text) if items_text else "Sin items",
+            inline=False
+        )
+    
+    # Participantes
+    participant_mentions = [f"<@{p['user_id']}>" for p in participants]
+    embed.add_field(
+        name=f"👥 Participantes ({len(participants)})",
+        value=", ".join(participant_mentions) if participant_mentions else "Sin participantes",
+        inline=False
+    )
+    
+    # Totales
+    embed.add_field(name="💰 Total de Loot", value=f"{total_value:,} gp", inline=True)
+    embed.add_field(
+        name="💵 Por Persona",
+        value=f"{per_person:,} gp" if participants else "0 gp",
+        inline=True
+    )
+    
+    embed.set_footer(text="¡Buen hunt!")
+    return embed
