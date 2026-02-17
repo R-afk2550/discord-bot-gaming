@@ -97,11 +97,29 @@ GUILD_ID=                    # Opcional: ID de tu servidor
 WELCOME_CHANNEL_ID=          # Opcional: ID del canal de bienvenida
 LOG_CHANNEL_ID=              # Opcional: ID del canal de logs
 PREFIX=/                      # Opcional: Default /
+
+# Configuración de GitHub (Opcional, para comandos de estado)
+GITHUB_TOKEN=                # Opcional: Token de GitHub para comandos /github_*
+GITHUB_REPO_OWNER=R-afk2550  # Opcional: Owner del repositorio
+GITHUB_REPO_NAME=discord-bot-gaming  # Opcional: Nombre del repositorio
 ```
 
 **¿Cómo obtener IDs?**
 1. Activa el "Modo Desarrollador" en Discord (Configuración > Avanzado > Modo Desarrollador)
 2. Haz clic derecho en servidor/canal > "Copiar ID"
+
+**¿Cómo obtener un token de GitHub? (Opcional)**
+1. Ve a [GitHub Settings](https://github.com/settings/tokens)
+2. Clic en "Generate new token" > "Generate new token (classic)"
+3. Dale un nombre descriptivo (ej: "Discord Bot")
+4. Selecciona el scope `repo` (o solo `public_repo` si el repositorio es público)
+5. Genera el token y **cópialo inmediatamente** (solo se muestra una vez)
+6. Pega el token en `GITHUB_TOKEN` en tu archivo `.env`
+
+⚠️ **NOTA DE SEGURIDAD**: 
+- El token solo se muestra una vez al generarlo. Guárdalo de forma segura.
+- No compartas tu token ni lo subas a repositorios públicos.
+- Para una mejor seguridad, considera usar fine-grained tokens en lugar de tokens clásicos.
 
 ### 5. Configurar Permisos e Invitar el Bot
 
@@ -202,6 +220,13 @@ Crea estos canales en tu servidor para mejor experiencia:
 | `/userinfo [@usuario]` | Información de usuario |
 | `/perfil` | Ver tu perfil de gaming |
 | `/ayuda` | Lista de todos los comandos |
+
+### 📊 Estado de GitHub
+
+| Comando | Descripción | Ejemplo |
+|---------|-------------|---------|
+| `/github_prs [limit]` | Ver pull requests abiertos en el repositorio | `/github_prs 5` |
+| `/github_deployments [limit]` | Ver deployments/workflows recientes | `/github_deployments 5` |
 
 ## 🔐 Permisos Necesarios del Bot
 

@@ -77,7 +77,8 @@ class GamingBot(commands.Bot):
             'levels',
             'economy',
             'logging',
-            'tibia'
+            'tibia',
+            'github_status'
         ]
         
         for cog_file in cog_files:
