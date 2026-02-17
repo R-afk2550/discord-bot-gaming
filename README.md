@@ -113,7 +113,13 @@ GITHUB_REPO_NAME=discord-bot-gaming  # Opcional: Nombre del repositorio
 2. Clic en "Generate new token" > "Generate new token (classic)"
 3. Dale un nombre descriptivo (ej: "Discord Bot")
 4. Selecciona el scope `repo` (o solo `public_repo` si el repositorio es público)
-5. Genera y copia el token en `GITHUB_TOKEN`
+5. Genera el token y **cópialo inmediatamente** (solo se muestra una vez)
+6. Pega el token en `GITHUB_TOKEN` en tu archivo `.env`
+
+⚠️ **NOTA DE SEGURIDAD**: 
+- El token solo se muestra una vez al generarlo. Guárdalo de forma segura.
+- No compartas tu token ni lo subas a repositorios públicos.
+- Para mejor seguridad, considera usar fine-grained tokens en lugar de tokens clásicos.
 
 ### 5. Configurar Permisos e Invitar el Bot
 

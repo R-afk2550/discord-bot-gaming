@@ -26,10 +26,12 @@ class GitHubStatusCog(commands.Cog):
     
     def _format_datetime(self, dt_str: str) -> str:
         """Formatea una fecha ISO a formato legible"""
+        if not dt_str:
+            return "N/A"
         try:
             dt = datetime.fromisoformat(dt_str.replace('Z', '+00:00'))
             return dt.strftime("%d/%m/%Y %H:%M")
-        except:
+        except (ValueError, AttributeError, TypeError):
             return dt_str
     
     def _get_status_emoji(self, state: str, merged: bool = False) -> str:
@@ -238,7 +240,7 @@ class GitHubStatusCog(commands.Cog):
                     
                     # Formatear estado
                     if run_status == "completed":
-                        status_text = f"{run_conclusion.upper() if run_conclusion else 'COMPLETED'}"
+                        status_text = run_conclusion.upper() if run_conclusion is not None else 'COMPLETED'
                     else:
                         status_text = run_status.upper()
                     
