@@ -119,7 +119,7 @@ GITHUB_REPO_NAME=discord-bot-gaming  # Opcional: Nombre del repositorio
 ⚠️ **NOTA DE SEGURIDAD**: 
 - El token solo se muestra una vez al generarlo. Guárdalo de forma segura.
 - No compartas tu token ni lo subas a repositorios públicos.
-- Para mejor seguridad, considera usar fine-grained tokens en lugar de tokens clásicos.
+- Para una mejor seguridad, considera usar fine-grained tokens en lugar de tokens clásicos.
 
 ### 5. Configurar Permisos e Invitar el Bot
 

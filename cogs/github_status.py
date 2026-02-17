@@ -156,11 +156,18 @@ class GitHubStatusCog(commands.Cog):
             
             await interaction.followup.send(embed=embed)
             
+        except aiohttp.ClientError as e:
+            logger.error(f"Error de conexión al obtener PRs de GitHub: {e}")
+            embed = create_error_embed(
+                "Error de Conexión",
+                "No se pudo conectar a GitHub. Por favor, intenta más tarde."
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
         except Exception as e:
-            logger.error(f"Error al obtener PRs de GitHub: {e}")
+            logger.error(f"Error inesperado al obtener PRs de GitHub: {e}", exc_info=True)
             embed = create_error_embed(
                 "Error",
-                f"Ocurrió un error al obtener los pull requests: {str(e)}"
+                f"Ocurrió un error inesperado al obtener los pull requests: {str(e)}"
             )
             await interaction.followup.send(embed=embed, ephemeral=True)
     
@@ -240,7 +247,7 @@ class GitHubStatusCog(commands.Cog):
                     
                     # Formatear estado
                     if run_status == "completed":
-                        status_text = run_conclusion.upper() if run_conclusion is not None else 'COMPLETED'
+                        status_text = run_conclusion.upper() if run_conclusion else 'COMPLETED'
                     else:
                         status_text = run_status.upper()
                     
@@ -268,11 +275,18 @@ class GitHubStatusCog(commands.Cog):
             
             await interaction.followup.send(embed=embed)
             
+        except aiohttp.ClientError as e:
+            logger.error(f"Error de conexión al obtener workflow runs de GitHub: {e}")
+            embed = create_error_embed(
+                "Error de Conexión",
+                "No se pudo conectar a GitHub. Por favor, intenta más tarde."
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
         except Exception as e:
-            logger.error(f"Error al obtener workflow runs de GitHub: {e}")
+            logger.error(f"Error inesperado al obtener workflow runs de GitHub: {e}", exc_info=True)
             embed = create_error_embed(
                 "Error",
-                f"Ocurrió un error al obtener los deployments: {str(e)}"
+                f"Ocurrió un error inesperado al obtener los deployments: {str(e)}"
             )
             await interaction.followup.send(embed=embed, ephemeral=True)
 
