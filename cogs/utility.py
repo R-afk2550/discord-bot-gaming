@@ -159,6 +159,16 @@ class UtilityCog(commands.Cog):
             inline=False
         )
         
+        # Comandos de GitHub
+        embed.add_field(
+            name="📊 Estado de GitHub",
+            value=(
+                "`/github_prs [limit]` - Ver pull requests abiertos\n"
+                "`/github_deployments [limit]` - Ver deployments recientes"
+            ),
+            inline=False
+        )
+        
         # Información de juegos disponibles
         games_list = ", ".join([f"{data['emoji']} {key}" for key, data in GAMES.items()])
         embed.add_field(
