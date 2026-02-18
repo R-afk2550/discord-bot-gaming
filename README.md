@@ -10,6 +10,7 @@ Bot profesional de Discord desarrollado en Python usando discord.py, diseñado e
 - **Moderación Completa**: Kick, ban, warn, mute, y gestión de mensajes
 - **Sistema de Eventos**: Creación y recordatorios automáticos de eventos
 - **Comandos de Utilidad**: Información del servidor, usuarios, y más
+- **🏠 Códigos de Acceso Residencial**: Sistema completo para generar y gestionar códigos de acceso a residenciales
 
 ## 🎯 Juegos Soportados
 
@@ -193,6 +194,25 @@ Crea estos canales en tu servidor para mejor experiencia:
 | `/evento <título> <fecha> <descripción>` | Crear evento | `/evento Torneo 25/12/2024 20:00 Torneo de LoL` |
 | `/eventos` | Ver próximos eventos | `/eventos` |
 
+### 🏠 Códigos de Acceso Residencial
+
+| Comando | Descripción | Permisos |
+|---------|-------------|----------|
+| `/generar_codigo <residente> [tipo] [duracion_horas] [ubicacion] [notas]` | Generar código de acceso | Administrador |
+| `/validar_codigo <codigo>` | Validar un código de acceso | Todos |
+| `/listar_codigos [filtro] [residente]` | Listar códigos activos | Manage Server |
+| `/revocar_codigo <codigo>` | Revocar un código de acceso | Administrador |
+| `/historial_codigo <codigo>` | Ver historial de uso de un código | Manage Server |
+
+**Características del sistema de códigos:**
+- 🔑 Generación automática de códigos únicos
+- ⏰ Códigos temporales con expiración automática
+- ♾️ Códigos permanentes sin fecha de expiración
+- 📍 Asignación de códigos a ubicaciones específicas
+- 📊 Registro completo del historial de uso
+- 🚫 Sistema de revocación de códigos
+- 📝 Notas personalizadas para cada código
+
 ### 🔧 Utilidad
 
 | Comando | Descripción |
@@ -298,6 +318,74 @@ COLORS = {
 }
 ```
 
+## 🏠 Sistema de Códigos de Acceso Residencial
+
+El bot incluye un sistema completo para gestionar códigos de acceso a residenciales, ideal para condominios, comunidades cerradas o cualquier lugar que necesite control de acceso.
+
+### Casos de Uso
+
+- 🏘️ **Condominios y Residenciales**: Generar códigos temporales para visitantes
+- 🏢 **Edificios Corporativos**: Códigos de acceso para proveedores o visitas
+- 🎉 **Eventos en Comunidades**: Códigos temporales para invitados de eventos
+- 🚚 **Entregas y Servicios**: Códigos de un solo uso para repartidores
+- 👨‍👩‍👧‍👦 **Familiares y Amigos**: Códigos permanentes para visitas frecuentes
+
+### Tipos de Códigos
+
+#### Códigos Temporales
+- ⏰ Se pueden configurar con duración personalizada (horas)
+- 🔄 Expiran automáticamente después del tiempo especificado
+- ✅ Ideales para visitantes ocasionales o entregas
+
+#### Códigos Permanentes
+- ♾️ Sin fecha de expiración
+- 👨‍👩‍👧 Perfectos para residentes o personal frecuente
+- 🔐 Se pueden revocar manualmente cuando sea necesario
+
+### Ejemplo de Uso
+
+```bash
+# Generar un código temporal para un visitante (24 horas)
+/generar_codigo residente:"Juan Pérez" tipo:temporal duracion_horas:24 ubicacion:"Torre A, Apt 301"
+
+# Validar el código cuando llegue el visitante
+/validar_codigo codigo:ABC123
+
+# Listar todos los códigos activos
+/listar_codigos filtro:todos
+
+# Ver el historial de uso de un código específico
+/historial_codigo codigo:ABC123
+
+# Revocar un código antes de que expire
+/revocar_codigo codigo:ABC123
+```
+
+### Seguridad del Sistema
+
+- 🔐 **Generación Criptográfica**: Códigos generados usando el módulo `secrets` de Python
+- 🔑 **Códigos Únicos**: Verificación automática de unicidad
+- 👮 **Control de Permisos**: Solo administradores pueden generar y revocar códigos
+- 📊 **Auditoría Completa**: Registro detallado de todos los usos y accesos
+- ⏰ **Expiración Automática**: Los códigos temporales dejan de funcionar automáticamente
+
+### Base de Datos
+
+El sistema utiliza dos tablas en SQLite:
+
+- **residential_access_codes**: Almacena los códigos de acceso
+  - Información del residente
+  - Tipo de código (temporal/permanente)
+  - Fecha de expiración
+  - Ubicación
+  - Estado (activo/revocado)
+  - Contador de usos
+
+- **access_code_history**: Registro de cada uso
+  - Usuario que validó el código
+  - Fecha y hora del uso
+  - Referencia al código utilizado
+
 ## 🤝 Contribuir
 
 ¡Las contribuciones son bienvenidas! Si quieres mejorar el bot:
@@ -323,6 +411,8 @@ El bot usa SQLite para almacenar:
 - **warnings**: Advertencias de usuarios
 - **user_profiles**: Perfiles de gaming (juegos favoritos)
 - **events**: Eventos programados
+- **residential_access_codes**: Códigos de acceso residencial
+- **access_code_history**: Historial de uso de códigos
 
 La base de datos se crea automáticamente en `gaming_bot.db`
 
@@ -333,6 +423,7 @@ La base de datos se crea automáticamente en `gaming_bot.db`
 - ✅ `.gitignore` está configurado para evitar subir `.env`
 - ✅ Validación de permisos antes de ejecutar comandos
 - ✅ Manejo de errores robusto
+- ✅ Generación criptográfica de códigos de acceso
 
 ## 📄 Licencia
 

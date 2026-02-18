@@ -96,6 +96,36 @@ class DatabaseManager:
                 )
             ''')
             
+            # Tabla de códigos de acceso residencial
+            await db.execute('''
+                CREATE TABLE IF NOT EXISTS residential_access_codes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    guild_id INTEGER NOT NULL,
+                    code TEXT NOT NULL,
+                    resident_name TEXT NOT NULL,
+                    code_type TEXT NOT NULL,
+                    created_by INTEGER NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    expiry_date DATETIME,
+                    location TEXT,
+                    notes TEXT,
+                    is_active BOOLEAN DEFAULT 1,
+                    revoked_at DATETIME,
+                    use_count INTEGER DEFAULT 0
+                )
+            ''')
+            
+            # Tabla de historial de uso de códigos
+            await db.execute('''
+                CREATE TABLE IF NOT EXISTS access_code_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    code_id INTEGER NOT NULL,
+                    used_by INTEGER NOT NULL,
+                    used_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (code_id) REFERENCES residential_access_codes(id)
+                )
+            ''')
+            
             await db.commit()
             logger.info("Base de datos inicializada correctamente")
     
@@ -423,6 +453,186 @@ class DatabaseManager:
             ) as cursor:
                 result = await cursor.fetchone()
                 return result[0] if result and result[0] else 0
+    
+    # ===== MÉTODOS PARA CÓDIGOS DE ACCESO RESIDENCIAL =====
+    
+    async def create_access_code(
+        self,
+        guild_id: int,
+        code: str,
+        resident_name: str,
+        code_type: str,
+        created_by: int,
+        expiry_date: Optional[datetime] = None,
+        location: Optional[str] = None,
+        notes: Optional[str] = None
+    ):
+        """Crea un nuevo código de acceso residencial"""
+        async with aiosqlite.connect(self.db_name) as db:
+            await db.execute(
+                '''INSERT INTO residential_access_codes 
+                   (guild_id, code, resident_name, code_type, created_by, 
+                    expiry_date, location, notes) 
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+                (guild_id, code.upper(), resident_name, code_type, created_by,
+                 expiry_date.isoformat() if expiry_date else None, location, notes)
+            )
+            await db.commit()
+            logger.info(f"Código de acceso {code} creado para {resident_name}")
+    
+    async def get_access_code_by_code(
+        self,
+        guild_id: int,
+        code: str
+    ) -> Optional[Dict]:
+        """Obtiene un código de acceso por su código"""
+        async with aiosqlite.connect(self.db_name) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute(
+                '''SELECT * FROM residential_access_codes 
+                   WHERE guild_id = ? AND code = ?''',
+                (guild_id, code.upper())
+            ) as cursor:
+                row = await cursor.fetchone()
+                return dict(row) if row else None
+    
+    async def get_active_access_codes(
+        self,
+        guild_id: int,
+        code_type: Optional[str] = None,
+        resident_name: Optional[str] = None
+    ) -> List[Dict]:
+        """Obtiene todos los códigos de acceso activos"""
+        async with aiosqlite.connect(self.db_name) as db:
+            db.row_factory = aiosqlite.Row
+            
+            query = '''SELECT * FROM residential_access_codes 
+                      WHERE guild_id = ? AND is_active = 1'''
+            params = [guild_id]
+            
+            if code_type:
+                query += ' AND code_type = ?'
+                params.append(code_type)
+            
+            if resident_name:
+                query += ' AND resident_name LIKE ?'
+                params.append(f'%{resident_name}%')
+            
+            query += ' ORDER BY created_at DESC'
+            
+            async with db.execute(query, params) as cursor:
+                rows = await cursor.fetchall()
+                return [dict(row) for row in rows]
+    
+    async def revoke_access_code(self, code_id: int):
+        """Revoca un código de acceso"""
+        async with aiosqlite.connect(self.db_name) as db:
+            await db.execute(
+                '''UPDATE residential_access_codes 
+                   SET is_active = 0, revoked_at = ? 
+                   WHERE id = ?''',
+                (datetime.now().isoformat(), code_id)
+            )
+            await db.commit()
+            logger.info(f"Código de acceso ID {code_id} revocado")
+    
+    async def register_access_code_use(self, code_id: int, used_by: int):
+        """Registra el uso de un código de acceso"""
+        async with aiosqlite.connect(self.db_name) as db:
+            # Incrementar contador de usos
+            await db.execute(
+                '''UPDATE residential_access_codes 
+                   SET use_count = use_count + 1 
+                   WHERE id = ?''',
+                (code_id,)
+            )
+            
+            # Registrar en el historial
+            await db.execute(
+                '''INSERT INTO access_code_history (code_id, used_by) 
+                   VALUES (?, ?)''',
+                (code_id, used_by)
+            )
+            
+            await db.commit()
+            logger.info(f"Uso registrado para código ID {code_id} por usuario {used_by}")
+    
+    async def get_access_code_history(self, code_id: int) -> List[Dict]:
+        """Obtiene el historial de uso de un código"""
+        async with aiosqlite.connect(self.db_name) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute(
+                '''SELECT * FROM access_code_history 
+                   WHERE code_id = ? 
+                   ORDER BY used_at DESC''',
+                (code_id,)
+            ) as cursor:
+                rows = await cursor.fetchall()
+                return [dict(row) for row in rows]
+    
+    async def get_expired_codes(self, guild_id: int) -> List[Dict]:
+        """Obtiene códigos expirados que aún están activos"""
+        async with aiosqlite.connect(self.db_name) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute(
+                '''SELECT * FROM residential_access_codes 
+                   WHERE guild_id = ? 
+                   AND is_active = 1 
+                   AND expiry_date IS NOT NULL 
+                   AND expiry_date < ?''',
+                (guild_id, datetime.now().isoformat())
+            ) as cursor:
+                rows = await cursor.fetchall()
+                return [dict(row) for row in rows]
+    
+    async def get_access_code_stats(self, guild_id: int) -> Dict:
+        """Obtiene estadísticas generales de códigos de acceso"""
+        async with aiosqlite.connect(self.db_name) as db:
+            stats = {}
+            
+            # Total de códigos activos
+            async with db.execute(
+                'SELECT COUNT(*) FROM residential_access_codes WHERE guild_id = ? AND is_active = 1',
+                (guild_id,)
+            ) as cursor:
+                result = await cursor.fetchone()
+                stats['active_codes'] = result[0] if result else 0
+            
+            # Total de códigos revocados
+            async with db.execute(
+                'SELECT COUNT(*) FROM residential_access_codes WHERE guild_id = ? AND is_active = 0',
+                (guild_id,)
+            ) as cursor:
+                result = await cursor.fetchone()
+                stats['revoked_codes'] = result[0] if result else 0
+            
+            # Total de usos
+            async with db.execute(
+                'SELECT SUM(use_count) FROM residential_access_codes WHERE guild_id = ?',
+                (guild_id,)
+            ) as cursor:
+                result = await cursor.fetchone()
+                stats['total_uses'] = result[0] if result and result[0] else 0
+            
+            # Códigos temporales activos
+            async with db.execute(
+                '''SELECT COUNT(*) FROM residential_access_codes
+                   WHERE guild_id = ? AND is_active = 1 AND code_type = 'temporal' ''',
+                (guild_id,)
+            ) as cursor:
+                result = await cursor.fetchone()
+                stats['temporal_codes'] = result[0] if result else 0
+            
+            # Códigos permanentes activos
+            async with db.execute(
+                '''SELECT COUNT(*) FROM residential_access_codes
+                   WHERE guild_id = ? AND is_active = 1 AND code_type = 'permanente' ''',
+                (guild_id,)
+            ) as cursor:
+                result = await cursor.fetchone()
+                stats['permanent_codes'] = result[0] if result else 0
+            
+            return stats
 
 
 # Instancia global del gestor de base de datos
