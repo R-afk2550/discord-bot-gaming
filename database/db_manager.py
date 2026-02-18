@@ -616,7 +616,7 @@ class DatabaseManager:
             
             # Códigos temporales activos
             async with db.execute(
-                '''SELECT COUNT(*) FROM residential_access_codes 
+                '''SELECT COUNT(*) FROM residential_access_codes
                    WHERE guild_id = ? AND is_active = 1 AND code_type = 'temporal' ''',
                 (guild_id,)
             ) as cursor:
@@ -625,7 +625,7 @@ class DatabaseManager:
             
             # Códigos permanentes activos
             async with db.execute(
-                '''SELECT COUNT(*) FROM residential_access_codes 
+                '''SELECT COUNT(*) FROM residential_access_codes
                    WHERE guild_id = ? AND is_active = 1 AND code_type = 'permanente' ''',
                 (guild_id,)
             ) as cursor:
